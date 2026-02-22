@@ -1,134 +1,39 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+<script>
+  const targetEl = document.querySelector('#target');
+  const overlay = document.querySelector('#scanning-overlay');
+  const dino = document.querySelector('#dino');
+  const toggleBtn = document.querySelector('#toggleMode');
+
+  targetEl.addEventListener("targetFound", () => { overlay.classList.add("hidden"); });
+  targetEl.addEventListener("targetLost", () => { overlay.classList.remove("hidden"); });
+
+  let isVertical = false;
+
+  toggleBtn.addEventListener('click', () => {
+    isVertical = !isVertical;
     
-    <style>
-      body { margin: 0; overflow: hidden; }
-      #scanning-overlay {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.7);
-        display: flex; flex-direction: column; justify-content: center; align-items: center;
-        color: white; font-family: sans-serif; z-index: 99;
+    if (isVertical) {
+      // STANDING UP (Wall Mode)
+      // If 90 was flat on the wall, 0 should be standing straight up toward the user.
+      dino.setAttribute('rotation', '0 0 0'); 
+      dino.setAttribute('position', '0 0.1 0'); // Lowered because it's standing now
+      toggleBtn.innerText = "Switch to Flat";
+    } else {
+      // LAYING DOWN (Table Mode)
+      // This is the "Wall" look you described earlier.
+      dino.setAttribute('rotation', '90 0 0');
+      dino.setAttribute('position', '0 0.5 0'); // Raised slightly so it sits on the paper
+      toggleBtn.innerText = "Switch to Vertical";
+    }
+  });
+
+  dino.addEventListener('model-loaded', () => {
+    const mesh = dino.getObject3D('mesh');
+    mesh.traverse((node) => {
+      if (node.isMesh) {
+        node.material.metalness = 0;
+        node.material.roughness = 1;
       }
-      #scanning-overlay.hidden { display: none !important; }
-      #ui-container {
-        position: fixed; bottom: 20px; left: 50%;
-        transform: translateX(-50%); z-index: 100;
-        display: flex; gap: 10px;
-      }
-      .btn {
-        background: rgba(0, 0, 0, 0.6); color: white; border: 2px solid white;
-        padding: 12px 20px; border-radius: 25px; font-family: sans-serif;
-        font-weight: bold; cursor: pointer;
-      }
-    </style>
-
-    <script>
-      // THE MISSING ROTATION SCRIPT
-      AFRAME.registerComponent('drag-rotate', {
-        schema: { speed: {default: 2} },
-        init: function() {
-          this.ifMouseDown = false;
-          this.x_cord = 0;
-          const handleStart = (x) => { this.ifMouseDown = true; this.x_cord = x; };
-          const handleEnd = () => { this.ifMouseDown = false; };
-          const handleMove = (x) => {
-            if(this.ifMouseDown) {
-              let temp_x = x - this.x_cord;
-              // Rotate around the local Y axis (spins the character)
-              this.el.object3D.rotateY(temp_x * (this.data.speed / 1000));
-              this.x_cord = x;
-            }
-          };
-          document.addEventListener('mousedown', (e) => handleStart(e.clientX));
-          document.addEventListener('touchstart', (e) => handleStart(e.touches[0].clientX));
-          document.addEventListener('mouseup', handleEnd);
-          document.addEventListener('touchend', handleEnd);
-          document.addEventListener('mousemove', (e) => handleMove(e.clientX));
-          document.addEventListener('touchmove', (e) => handleMove(e.touches[0].clientX));
-        }
-      });
-    </script>
-  </head>
-  <body>
-
-    <div id="scanning-overlay">
-      <p>Scanning for Target...</p>
-    </div>
-
-    <div id="ui-container">
-      <button class="btn" id="toggleMode">Switch to Vertical</button>
-    </div>
-
-    <a-scene 
-      mindar-image="imageTargetSrc: ./TREX.mind; uiScanning: #scanning-overlay; filterMinCF: 0.0001; filterBeta: 0.001;" 
-      color-space="sRGB" 
-      renderer="colorManagement: true, physicallyCorrectLights: true" 
-      vr-mode-ui="enabled: false" 
-      device-orientation-permission-ui="enabled: false">
-      
-      <a-assets>
-        <a-asset-item id="dinoModel" src="roar4.glb"></a-asset-item>
-      </a-assets>
-
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-      <a-entity light="type: hemisphere; intensity: 3"></a-entity>
-      <a-entity light="type: directional; intensity: 2" position="-1 2 1"></a-entity>
-
-      <a-entity id="target" mindar-image-target="targetIndex: 0">
-        <a-gltf-model 
-          id="dino"
-          src="#dinoModel" 
-          rotation="0 0 0" 
-          position="0 0.1 0" 
-          scale="0.8 0.8 0.8"
-          animation-mixer
-          drag-rotate> </a-gltf-model>
-      </a-entity>
-    </a-scene>
-
-    <script>
-      const targetEl = document.querySelector('#target');
-      const overlay = document.querySelector('#scanning-overlay');
-      const dino = document.querySelector('#dino');
-      const toggleBtn = document.querySelector('#toggleMode');
-
-      targetEl.addEventListener("targetFound", () => { overlay.classList.add("hidden"); });
-      targetEl.addEventListener("targetLost", () => { overlay.classList.remove("hidden"); });
-
-      let isVertical = false;
-
-      toggleBtn.addEventListener('click', () => {
-        isVertical = !isVertical;
-        
-        if (isVertical) {
-          // STANDING UP (Wall Mode)
-          dino.setAttribute('rotation', '-90 0 0');
-          dino.setAttribute('position', '0 0.5 0'); 
-          toggleBtn.innerText = "Switch to Flat";
-        } else {
-          // LAYING DOWN (Table Mode)
-          dino.setAttribute('rotation', '0 0 0');
-          dino.setAttribute('position', '0 0.1 0');
-          toggleBtn.innerText = "Switch to Vertical";
-        }
-      });
-
-      // Brighter material fix
-      dino.addEventListener('model-loaded', () => {
-        const mesh = dino.getObject3D('mesh');
-        mesh.traverse((node) => {
-          if (node.isMesh) {
-            node.material.metalness = 0;
-            node.material.roughness = 1;
-          }
-        });
-      });
-    </script>
-  </body>
-</html>
+    });
+  });
+</script>
