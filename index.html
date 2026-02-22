@@ -5,11 +5,14 @@
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
     
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+    
     <style>
       body { margin: 0; overflow: hidden; }
+      /* THE SCANNING SCREEN */
       #scanning-overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.8);
         display: flex; flex-direction: column; justify-content: center; align-items: center;
         color: white; font-family: sans-serif; z-index: 99;
       }
@@ -30,9 +33,9 @@
     </div>
 
     <a-scene 
-      mindar-image="imageTargetSrc: ./TREX.mind; uiScanning: #scanning-overlay;" 
+      mindar-image="imageTargetSrc: ./TREX.mind; uiScanning: #scanning-overlay; filterMinCF:0.001; filterBeta: 10;" 
       color-space="sRGB" 
-      renderer="colorManagement: true, physicallyCorrectLights: true" 
+      renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true" 
       vr-mode-ui="enabled: false" 
       device-orientation-permission-ui="enabled: false">
       
@@ -40,18 +43,19 @@
         <a-asset-item id="dinoModel" src="roar4.glb"></a-asset-item>
       </a-assets>
 
-      <a-entity light="type: ambient; intensity: 1.5; color: #ffffff"></a-entity>
-      <a-entity light="type: directional; intensity: 1.2; castShadow: true" position="1 2 1"></a-entity>
-
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <a-entity light="type: hemisphere; color: #FFF; groundColor: #444; intensity: 3"></a-entity>
+      <a-entity light="type: directional; color: #FFF; intensity: 2" position="-1 2 1"></a-entity>
 
       <a-entity id="target" mindar-image-target="targetIndex: 0">
         <a-gltf-model 
           id="dino"
           src="#dinoModel" 
           rotation="0 0 0" 
-          position="0 0.5 0" 
-          scale="0.5 0.5 0.5">
+          position="0 0 0.1" 
+          scale="0.5 0.5 0.5"
+          animation-mixer>
         </a-gltf-model>
       </a-entity>
     </a-scene>
@@ -60,9 +64,8 @@
       const targetEl = document.querySelector('#target');
       const overlay = document.querySelector('#scanning-overlay');
 
-      // UI FIX: Forces the overlay to hide
+      // UI FIX: Double-enforce the hide logic
       targetEl.addEventListener("targetFound", () => {
-        console.log("Found!");
         overlay.classList.add("hidden");
       });
 
@@ -70,16 +73,15 @@
         overlay.classList.remove("hidden");
       });
 
-      // DARK MODEL FIX: Forces the material to be bright and solid
+      // DARK MODEL FIX: This forces the model to be bright even if lights fail
       const dino = document.querySelector('#dino');
       dino.addEventListener('model-loaded', () => {
         const mesh = dino.getObject3D('mesh');
         mesh.traverse((node) => {
           if (node.isMesh) {
             node.material.transparent = false;
-            node.material.depthWrite = true;
-            // This forces the model to ignore darkness
-            node.material.emissiveIntensity = 0.5; 
+            node.material.metalness = 0; // High metalness makes models look black in AR
+            node.material.roughness = 1;
           }
         });
       });
