@@ -8,8 +8,6 @@
     
     <style>
       body { margin: 0; overflow: hidden; }
-      
-      /* THE SCANNING SCREEN */
       #scanning-overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0, 0, 0, 0.7);
@@ -17,28 +15,44 @@
         color: white; font-family: sans-serif; z-index: 99;
       }
       #scanning-overlay.hidden { display: none !important; }
-
-      /* THE TOGGLE BUTTON */
       #ui-container {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 100;
-        display: flex;
-        gap: 10px;
+        position: fixed; bottom: 20px; left: 50%;
+        transform: translateX(-50%); z-index: 100;
+        display: flex; gap: 10px;
       }
       .btn {
-        background: rgba(0, 0, 0, 0.6);
-        color: white;
-        border: 2px solid white;
-        padding: 12px 20px;
-        border-radius: 25px;
-        font-family: sans-serif;
-        font-weight: bold;
-        cursor: pointer;
+        background: rgba(0, 0, 0, 0.6); color: white; border: 2px solid white;
+        padding: 12px 20px; border-radius: 25px; font-family: sans-serif;
+        font-weight: bold; cursor: pointer;
       }
     </style>
+
+    <script>
+      // THE MISSING ROTATION SCRIPT
+      AFRAME.registerComponent('drag-rotate', {
+        schema: { speed: {default: 2} },
+        init: function() {
+          this.ifMouseDown = false;
+          this.x_cord = 0;
+          const handleStart = (x) => { this.ifMouseDown = true; this.x_cord = x; };
+          const handleEnd = () => { this.ifMouseDown = false; };
+          const handleMove = (x) => {
+            if(this.ifMouseDown) {
+              let temp_x = x - this.x_cord;
+              // Rotate around the local Y axis (spins the character)
+              this.el.object3D.rotateY(temp_x * (this.data.speed / 1000));
+              this.x_cord = x;
+            }
+          };
+          document.addEventListener('mousedown', (e) => handleStart(e.clientX));
+          document.addEventListener('touchstart', (e) => handleStart(e.touches[0].clientX));
+          document.addEventListener('mouseup', handleEnd);
+          document.addEventListener('touchend', handleEnd);
+          document.addEventListener('mousemove', (e) => handleMove(e.clientX));
+          document.addEventListener('touchmove', (e) => handleMove(e.touches[0].clientX));
+        }
+      });
+    </script>
   </head>
   <body>
 
@@ -70,11 +84,11 @@
         <a-gltf-model 
           id="dino"
           src="#dinoModel" 
-          rotation="90 0 0" 
+          rotation="0 0 0" 
           position="0 0.1 0" 
           scale="0.8 0.8 0.8"
-          animation-mixer>
-        </a-gltf-model>
+          animation-mixer
+          drag-rotate> </a-gltf-model>
       </a-entity>
     </a-scene>
 
@@ -84,27 +98,36 @@
       const dino = document.querySelector('#dino');
       const toggleBtn = document.querySelector('#toggleMode');
 
-      // UI Hide Logic
       targetEl.addEventListener("targetFound", () => { overlay.classList.add("hidden"); });
       targetEl.addEventListener("targetLost", () => { overlay.classList.remove("hidden"); });
 
-      // TOGGLE LOGIC
       let isVertical = false;
 
       toggleBtn.addEventListener('click', () => {
         isVertical = !isVertical;
         
         if (isVertical) {
-          // Standing up (Vertical/Wall mode)
-          dino.setAttribute('rotation', '0 0 0');
-          dino.setAttribute('position', '0 0.5 0'); // Shifted "up" so it stands on the base
+          // STANDING UP (Wall Mode)
+          dino.setAttribute('rotation', '-90 0 0');
+          dino.setAttribute('position', '0 0.5 0'); 
           toggleBtn.innerText = "Switch to Flat";
         } else {
-          // Laying down (Flat/Table mode)
-          dino.setAttribute('rotation', '90 0 0');
+          // LAYING DOWN (Table Mode)
+          dino.setAttribute('rotation', '0 0 0');
           dino.setAttribute('position', '0 0.1 0');
           toggleBtn.innerText = "Switch to Vertical";
         }
+      });
+
+      // Brighter material fix
+      dino.addEventListener('model-loaded', () => {
+        const mesh = dino.getObject3D('mesh');
+        mesh.traverse((node) => {
+          if (node.isMesh) {
+            node.material.metalness = 0;
+            node.material.roughness = 1;
+          }
+        });
       });
     </script>
   </body>
