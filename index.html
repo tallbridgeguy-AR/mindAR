@@ -4,15 +4,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     
     <style>
       body { margin: 0; overflow: hidden; }
-      /* THE SCANNING SCREEN */
       #scanning-overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.8);
+        background: rgba(0, 0, 0, 0.7);
         display: flex; flex-direction: column; justify-content: center; align-items: center;
         color: white; font-family: sans-serif; z-index: 99;
       }
@@ -24,6 +22,36 @@
       }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
+
+    <script>
+      // ROTATION SCRIPT: This lets you drag to spin the dino
+      AFRAME.registerComponent('drag-rotate', {
+        schema: { speed: {default: 2} },
+        init: function() {
+          this.ifMouseDown = false;
+          this.x_cord = 0;
+          document.addEventListener('mousedown', (e) => { this.ifMouseDown = true; this.x_cord = e.clientX; });
+          document.addEventListener('mouseup', () => { this.ifMouseDown = false; });
+          document.addEventListener('mousemove', (e) => {
+            if(this.ifMouseDown) {
+              let temp_x = e.clientX - this.x_cord;
+              this.el.object3D.rotateY(temp_x * (this.data.speed / 1000));
+              this.x_cord = e.clientX;
+            }
+          });
+          // Touch support for mobile
+          document.addEventListener('touchstart', (e) => { this.ifMouseDown = true; this.x_cord = e.touches[0].clientX; });
+          document.addEventListener('touchend', () => { this.ifMouseDown = false; });
+          document.addEventListener('touchmove', (e) => {
+            if(this.ifMouseDown) {
+              let temp_x = e.touches[0].clientX - this.x_cord;
+              this.el.object3D.rotateY(temp_x * (this.data.speed / 1000));
+              this.x_cord = e.touches[0].clientX;
+            }
+          });
+        }
+      });
+    </script>
   </head>
   <body>
 
@@ -33,9 +61,9 @@
     </div>
 
     <a-scene 
-      mindar-image="imageTargetSrc: ./TREX.mind; uiScanning: #scanning-overlay; filterMinCF:0.001; filterBeta: 10;" 
+      mindar-image="imageTargetSrc: ./TREX.mind; uiScanning: #scanning-overlay; filterMinCF: 0.0001; filterBeta: 0.001;" 
       color-space="sRGB" 
-      renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true" 
+      renderer="colorManagement: true, physicallyCorrectLights: true" 
       vr-mode-ui="enabled: false" 
       device-orientation-permission-ui="enabled: false">
       
@@ -45,17 +73,18 @@
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <a-entity light="type: hemisphere; color: #FFF; groundColor: #444; intensity: 3"></a-entity>
-      <a-entity light="type: directional; color: #FFF; intensity: 2" position="-1 2 1"></a-entity>
+      <a-entity light="type: hemisphere; intensity: 3"></a-entity>
+      <a-entity light="type: directional; intensity: 2" position="-1 2 1"></a-entity>
 
       <a-entity id="target" mindar-image-target="targetIndex: 0">
         <a-gltf-model 
           id="dino"
           src="#dinoModel" 
           rotation="0 0 0" 
-          position="0 0 0.1" 
+          position="0 0.5 0" 
           scale="0.5 0.5 0.5"
-          animation-mixer>
+          animation-mixer
+          drag-rotate>
         </a-gltf-model>
       </a-entity>
     </a-scene>
@@ -64,23 +93,16 @@
       const targetEl = document.querySelector('#target');
       const overlay = document.querySelector('#scanning-overlay');
 
-      // UI FIX: Double-enforce the hide logic
-      targetEl.addEventListener("targetFound", () => {
-        overlay.classList.add("hidden");
-      });
+      targetEl.addEventListener("targetFound", () => { overlay.classList.add("hidden"); });
+      targetEl.addEventListener("targetLost", () => { overlay.classList.remove("hidden"); });
 
-      targetEl.addEventListener("targetLost", () => {
-        overlay.classList.remove("hidden");
-      });
-
-      // DARK MODEL FIX: This forces the model to be bright even if lights fail
       const dino = document.querySelector('#dino');
       dino.addEventListener('model-loaded', () => {
         const mesh = dino.getObject3D('mesh');
         mesh.traverse((node) => {
           if (node.isMesh) {
             node.material.transparent = false;
-            node.material.metalness = 0; // High metalness makes models look black in AR
+            node.material.metalness = 0;
             node.material.roughness = 1;
           }
         });
