@@ -96,12 +96,12 @@
         
         if (isVertical) {
           // Standing up (Vertical/Wall mode)
-          dino.setAttribute('rotation', '-90 0 0');
+          dino.setAttribute('rotation', '0 0 0');
           dino.setAttribute('position', '0 0.5 0'); // Shifted "up" so it stands on the base
           toggleBtn.innerText = "Switch to Flat";
         } else {
           // Laying down (Flat/Table mode)
-          dino.setAttribute('rotation', '0 0 0');
+          dino.setAttribute('rotation', '90 0 0');
           dino.setAttribute('position', '0 0.1 0');
           toggleBtn.innerText = "Switch to Vertical";
         }
