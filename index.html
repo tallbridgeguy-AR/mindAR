@@ -9,7 +9,6 @@
     <style>
       body { margin: 0; overflow: hidden; }
       
-      /* THE SCANNING SCREEN */
       #scanning-overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0, 0, 0, 0.8);
@@ -18,21 +17,22 @@
       }
       #scanning-overlay.hidden { display: none !important; }
 
-      /* THE UI BUTTON */
       #ui-container {
         position: fixed; bottom: 30px; left: 50%;
         transform: translateX(-50%); z-index: 100;
         display: flex; gap: 10px;
+        width: max-content;
       }
       .btn {
         background: rgba(0, 0, 0, 0.7); color: white; border: 2px solid white;
-        padding: 15px 25px; border-radius: 30px; font-family: sans-serif;
+        padding: 12px 20px; border-radius: 30px; font-family: sans-serif;
         font-weight: bold; cursor: pointer; -webkit-tap-highlight-color: transparent;
+        white-space: nowrap;
       }
+      .btn:active { background: white; color: black; }
     </style>
 
     <script>
-      // DRAG ROTATE COMPONENT: Lets you spin the dino with your finger
       AFRAME.registerComponent('drag-rotate', {
         schema: { speed: {default: 2} },
         init: function() {
@@ -64,7 +64,9 @@
     </div>
 
     <div id="ui-container">
+      <button class="btn" id="zoomOut">-</button>
       <button class="btn" id="toggleMode">Switch to Vertical</button>
+      <button class="btn" id="zoomIn">+</button>
     </div>
 
     <a-scene 
@@ -79,7 +81,6 @@
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
       <a-entity light="type: hemisphere; intensity: 3"></a-entity>
       <a-entity light="type: directional; intensity: 2" position="-1 2 1"></a-entity>
 
@@ -102,31 +103,42 @@
       const overlay = document.querySelector('#scanning-overlay');
       const dino = document.querySelector('#dino');
       const toggleBtn = document.querySelector('#toggleMode');
+      const zoomInBtn = document.querySelector('#zoomIn');
+      const zoomOutBtn = document.querySelector('#zoomOut');
 
-      // Hide overlay when dino is found
       targetEl.addEventListener("targetFound", () => { overlay.classList.add("hidden"); });
       targetEl.addEventListener("targetLost", () => { overlay.classList.remove("hidden"); });
 
-      // TOGGLE LOGIC: Swapping between Flat and Vertical
+      // TOGGLE LOGIC
       let isVertical = false;
-
       toggleBtn.addEventListener('click', () => {
         isVertical = !isVertical;
-        
         if (isVertical) {
-          // MODE: VERTICAL (STANDING UP)
           dino.setAttribute('rotation', '0 0 0');
           dino.setAttribute('position', '0 0.1 0'); 
           toggleBtn.innerText = "Switch to Flat";
         } else {
-          // MODE: FLAT (ON TABLE)
           dino.setAttribute('rotation', '90 0 0');
           dino.setAttribute('position', '0 0.5 0');
           toggleBtn.innerText = "Switch to Vertical";
         }
       });
 
-      // MATERIAL FIX: Makes model solid and bright
+      // --- ZOOM LOGIC ---
+      let currentScale = 1.0;
+      const step = 0.2; // How much to zoom per click
+
+      zoomInBtn.addEventListener('click', () => {
+        currentScale += step;
+        dino.setAttribute('scale', `${currentScale} ${currentScale} ${currentScale}`);
+      });
+
+      zoomOutBtn.addEventListener('click', () => {
+        currentScale = Math.max(0.2, currentScale - step); // Prevents disappearing
+        dino.setAttribute('scale', `${currentScale} ${currentScale} ${currentScale}`);
+      });
+
+      // MATERIAL FIX
       dino.addEventListener('model-loaded', () => {
         const mesh = dino.getObject3D('mesh');
         mesh.traverse((node) => {
